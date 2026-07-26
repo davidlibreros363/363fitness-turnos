@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>363 Fitness Club — Gestión de Turnos</title>
+<style>
+  :root {
+    --negro: #0f0f0f;
+    --gris-oscuro: #1a1a1a;
+    --gris-medio: #2a2a2a;
+    --gris-borde: #333;
+    --gris-texto: #888;
+    --blanco: #f5f5f5;
+    --blanco-suave: #e0e0e0;
+    --verde: #00c37a;
+    --verde-suave: rgba(0,195,122,0.12);
+    --verde-borde: rgba(0,195,122,0.3);
+    --naranja: #ff8c42;
+    --naranja-suave: rgba(255,140,66,0.12);
+    --azul: #4a9eff;
+    --azul-suave: rgba(74,158,255,0.12);
+    --amarillo: #ffd166;
+    --amarillo-suave: rgba(255,209,102,0.12);
+    --morado: #a78bfa;
+    --morado-suave: rgba(167,139,250,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--negro); color: var(--blanco); font-family: -apple-system, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  header { background: var(--gris-oscuro); border-bottom: 1px solid var(--gris-borde); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 34px; height: 34px; background: var(--verde); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #000; letter-spacing: -1px; }
+  .logo-text { font-size: 15px; font-weight: 600; }
+  .logo-sub { font-size: 11px; color: var(--gris-texto); }
+  .live-wrap { display: flex; align-items: center; gap: 6px; }
+  .live-dot { width: 7px; height: 7px; background: var(--verde); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+  .live-label { font-size: 11px; color: var(--verde); font-weight: 500; }
+
+  .day-nav { background: var(--gris-oscuro); border-bottom: 1px solid var(--gris-borde); padding: 0 20px; display: flex; overflow-x: auto; }
+  .day-btn { padding: 13px 16px; font-size: 13px; font-weight: 500; color: var(--gris-texto); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; }
+  .day-btn:hover { color: var(--blanco); }
+  .day-btn.active { color: var(--verde); border-bottom-color: var(--verde); }
+  .day-btn.weekend { }
+  .day-separator { width: 1px; background: var(--gris-borde); margin: 10px 4px; }
+
+  .main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+
+  .view-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .view-tab { padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--gris-borde); background: none; color: var(--gris-texto); cursor: pointer; transition: all .15s; }
+  .view-tab.active { background: var(--verde); border-color: var(--verde); color: #000; }
+
+  .sedes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:768px){ .sedes-grid{ grid-template-columns:1fr; } }
+
+  .sede-card { background: var(--gris-oscuro); border: 1px solid var(--gris-borde); border-radius: 14px; overflow: hidden; }
+  .sede-header { padding: 12px 16px; border-bottom: 1px solid var(--gris-borde); display: flex; align-items: center; justify-content: space-between; }
+  .sede-name { font-size: 14px; font-weight: 600; }
+  .sede-badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .badge-s1 { background: var(--azul-suave); color: var(--azul); }
+  .badge-s28 { background: var(--naranja-suave); color: var(--naranja); }
+
+  .turno-block { padding: 12px 16px; border-bottom: 1px solid var(--gris-borde); }
+  .turno-block:last-child { border-bottom: none; }
+  .turno-time-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .turno-time { font-size: 11px; font-weight: 600; color: var(--gris-texto); text-transform: uppercase; letter-spacing: .04em; }
+  .turno-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-am { background: var(--azul-suave); color: var(--azul); }
+  .tag-pm { background: var(--morado-suave); color: var(--morado); }
+  .tag-apoyo { background: var(--amarillo-suave); color: var(--amarillo); }
+  .tag-full { background: var(--verde-suave); color: var(--verde); }
+
+  .persona-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .persona-row:last-child { border-bottom: none; }
+  .p-avatar { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .p-info { flex: 1; min-width: 0; }
+  .p-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .t-pri { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+  .t-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .t-label { font-size: 12px; color: var(--blanco-suave); font-weight: 500; }
+  .t-badge { font-size: 10px; padding: 2px 7px; border-radius: 5px; font-weight: 600; }
+  .t-cascada { font-size: 11px; color: var(--gris-texto); line-height: 1.5; padding-left: 13px; }
+
+  .dot-venta { background: var(--verde); }
+  .dot-cobro { background: var(--amarillo); }
+  .dot-digital { background: var(--azul); }
+  .dot-sac { background: var(--naranja); }
+  .dot-admin { background: var(--morado); }
+  .dot-soporte { background: var(--gris-texto); }
+  .pri-venta { background: var(--verde-suave); color: var(--verde); }
+  .pri-cobro { background: var(--amarillo-suave); color: var(--amarillo); }
+  .pri-digital { background: var(--azul-suave); color: var(--azul); }
+  .pri-sac { background: var(--naranja-suave); color: var(--naranja); }
+  .pri-admin { background: var(--morado-suave); color: var(--morado); }
+  .pri-soporte { background: rgba(136,136,136,0.1); color: var(--gris-texto); }
+
+  .alerta { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 12px; display: flex; gap: 6px; }
+  .alerta-warn { background: var(--amarillo-suave); border: 1px solid rgba(255,209,102,0.2); color: var(--amarillo); }
+
+  /* MATRIZ */
+  .matriz-wrap { background: var(--gris-oscuro); border: 1px solid var(--gris-borde); border-radius: 14px; overflow: hidden; }
+  .matriz-scroll { overflow-x: auto; }
+  .matriz-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  .matriz-table th { padding: 12px 14px; text-align: left; font-size: 10px; font-weight: 700; color: var(--gris-texto); text-transform: uppercase; letter-spacing: .07em; border-bottom: 1px solid var(--gris-borde); background: var(--gris-medio); white-space: nowrap; }
+  .matriz-table th.tc { text-align: center; }
+  .matriz-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+  .matriz-table tr:last-child td { border-bottom: none; }
+  .matriz-table tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .tc { text-align: center; }
+  .p-cell { display: flex; align-items: center; gap: 10px; }
+  .mini-av { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .cell-name { font-size: 13px; font-weight: 500; }
+  .cell-role { font-size: 10px; color: var(--gris-texto); margin-top: 1px; }
+  .nivel { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .n1 { background: #00c37a; color: #000; }
+  .n2 { background: #00a065; color: #fff; }
+  .n3 { background: #007a4d; color: #fff; }
+  .n4 { background: #2d4a3e; color: #7ecfae; }
+  .n5 { background: #252f2b; color: #5a8a72; }
+  .n6 { background: #222; color: #555; }
+  .n7 { background: #1a1a1a; color: #444; border: 1px solid #333; }
+  .n-star { background: rgba(255,209,102,0.15); color: var(--amarillo); font-size: 16px; border: 1px solid rgba(255,209,102,0.3); }
+  .n-dash { background: none; color: #444; font-size: 16px; }
+  .leyenda { display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--gris-borde); font-size: 11px; color: var(--gris-texto); align-items: center; }
+  .leg { display: flex; align-items: center; gap: 5px; }
+
+  /* REGLAS */
+  .prioridad-banner { background: var(--gris-oscuro); border: 1px solid var(--verde-borde); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .prioridad-title { font-size: 13px; font-weight: 600; color: var(--verde); margin-bottom: 10px; }
+  .prioridad-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .p-chip { font-size: 12px; padding: 5px 12px; border-radius: 20px; font-weight: 500; }
+  .reglas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:700px){ .reglas-grid{ grid-template-columns:1fr; } }
+  .regla-card { background: var(--gris-oscuro); border: 1px solid var(--gris-borde); border-radius: 12px; padding: 14px; }
+  .regla-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .regla-name { font-size: 14px; font-weight: 600; }
+  .regla-sede { font-size: 11px; color: var(--gris-texto); margin-top: 1px; }
+  .cascada { display: flex; flex-direction: column; gap: 2px; }
+  .c-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; }
+  .c-num { width: 20px; height: 20px; border-radius: 50%; background: var(--gris-medio); color: var(--gris-texto); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .c-texto { font-size: 12px; color: var(--blanco-suave); line-height: 1.4; }
+  .c-arrow { font-size: 10px; color: #444; padding-left: 28px; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">363</div>
+    <div>
+      <div class="logo-text">363 Fitness Club</div>
+      <div class="logo-sub">Gestión de turnos y tareas</div>
+    </div>
+  </div>
+  <div class="live-wrap">
+    <div class="live-dot"></div>
+    <span class="live-label" id="fecha-hoy"></span>
+  </div>
+</header>
+
+<nav class="day-nav">
+  <button class="day-btn" onclick="setDay(0,this)">Lunes</button>
+  <button class="day-btn" onclick="setDay(1,this)">Martes</button>
+  <button class="day-btn" onclick="setDay(2,this)">Miércoles</button>
+  <button class="day-btn" onclick="setDay(3,this)">Jueves</button>
+  <button class="day-btn" onclick="setDay(4,this)">Viernes</button>
+  <div class="day-separator"></div>
+  <button class="day-btn" onclick="setDay(5,this)">Sábado</button>
+  <button class="day-btn" onclick="setDay(6,this)">Domingo</button>
+</nav>
+
+<div class="main">
+  <div class="view-tabs">
+    <button class="view-tab active" onclick="setView('turnos',this)">Turnos del día</button>
+    <button class="view-tab" onclick="setView('matriz',this)">Matriz de habilidades</button>
+    <button class="view-tab" onclick="setView('reglas',this)">Reglas de cascada</button>
+  </div>
+
+  <div id="view-turnos"><div class="sedes-grid" id="sedes-container"></div></div>
+  <div id="view-matriz" style="display:none">
+    <div class="matriz-wrap">
+      <div class="matriz-scroll">
+        <table class="matriz-table">
+          <thead>
+            <tr>
+              <th>Persona</th>
+              <th class="tc">Ventas</th>
+              <th class="tc">Cobros</th>
+              <th class="tc">Digital WA/MC</th>
+              <th class="tc">Atención cliente</th>
+              <th class="tc">Admin / Caja</th>
+            </tr>
+          </thead>
+          <tbody id="matriz-body"></tbody>
+        </table>
+      </div>
+      <div class="leyenda">
+        <span style="font-weight:600;color:var(--blanco-suave)">Nivel:</span>
+        <span class="leg"><span class="nivel n1" style="width:20px;height:20px;font-size:10px">1</span> Mejor</span>
+        <span class="leg"><span class="nivel n3" style="width:20px;height:20px;font-size:10px">3</span> Buena</span>
+        <span class="leg"><span class="nivel n5" style="width:20px;height:20px;font-size:10px">5</span> Regular</span>
+        <span class="leg"><span class="nivel n7" style="width:20px;height:20px;font-size:10px">7</span> Última opción</span>
+        <span class="leg"><span class="nivel n-star" style="width:20px;height:20px;font-size:12px">★</span> Dueño del proceso</span>
+        <span class="leg"><span style="color:#444;font-size:16px">—</span> No aplica</span>
+      </div>
+    </div>
+  </div>
+  <div id="view-reglas" style="display:none">
+    <div class="prioridad-banner">
+      <div class="prioridad-title">⚡ Prioridad absoluta — genera ingresos primero</div>
+      <div class="prioridad-chips">
+        <span class="p-chip" style="background:var(--verde-suave);color:var(--verde)">① Venta presencial</span>
+        <span class="p-chip" style="background:var(--azul-suave);color:var(--azul)">② Digital WA/MC vendiendo</span>
+        <span class="p-chip" style="background:var(--amarillo-suave);color:var(--amarillo)">③ Cobros</span>
+        <span class="p-chip" style="background:var(--naranja-suave);color:var(--naranja)">④ SAC / Atención</span>
+        <span class="p-chip" style="background:var(--morado-suave);color:var(--morado)">⑤ Admin / Caja</span>
+      </div>
+    </div>
+    <div class="reglas-grid" id="reglas-container"></div>
+  </div>
+</div>
+
+<script>
+const AV = {
+  'Nicol':     { i:'NI', c:'#4a9eff', b:'rgba(74,158,255,0.15)' },
+  'Valentina': { i:'VA', c:'#00c37a', b:'rgba(0,195,122,0.15)' },
+  'Daniela':   { i:'DA', c:'#a78bfa', b:'rgba(167,139,250,0.15)' },
+  'Carlos':    { i:'CA', c:'#ff8c42', b:'rgba(255,140,66,0.15)' },
+  'Camila':    { i:'CM', c:'#ffd166', b:'rgba(255,209,102,0.15)' },
+  'Yeraldine': { i:'YE', c:'#f472b6', b:'rgba(244,114,182,0.15)' },
+  'Ángeles':   { i:'AN', c:'#34d399', b:'rgba(52,211,153,0.15)' },
+  'Tatiana':   { i:'TA', c:'#fb923c', b:'rgba(251,146,60,0.15)' },
+  'Heidy':     { i:'HE', c:'#94a3b8', b:'rgba(148,163,184,0.15)' },
+};
+
+const T = {
+  venta:   { dot:'dot-venta',   badge:'pri-venta',   label:'Ventas' },
+  cobro:   { dot:'dot-cobro',   badge:'pri-cobro',   label:'Cobros' },
+  digital: { dot:'dot-digital', badge:'pri-digital',  label:'Digital WA/MC' },
+  sac:     { dot:'dot-sac',     badge:'pri-sac',      label:'SAC / Atención' },
+  admin:   { dot:'dot-admin',   badge:'pri-admin',    label:'Admin / Caja' },
+  soporte: { dot:'dot-soporte', badge:'pri-soporte',  label:'Soporte operativo' },
+};
+
+const DIAS = [
+  // LUNES [0]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Daniela', t:'venta', c:'Digital WA cuando no hay cliente · próximos a vencer · fidelización sede 1ra' }
+      ]},
+      { hora:'1:00 PM – 3:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Admin de turno · subir ventas Caja 2026' }
+      ]},
+      { hora:'3:00 PM – 6:00 PM', tag:'Apoyo Valentina', tc:'tag-apoyo', personas:[
+        { n:'Camila', t:'venta', c:'Libre para vender — Valentina cubre cobros' },
+        { n:'Valentina', t:'cobro', c:'Lidera cobros · digital WA si hay backlog · revisión bases con Heidy' }
+      ]},
+      { hora:'6:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Cobros básicos si llegan · digital WA · cuadre caja · cierre tienda' }
+      ]}
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Valentina', t:'cobro', c:'Lidera cartera mañana ambas sedes · admin · bases · coordina con Heidy remoto' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono y transferencia · apertura tienda · soporte operativo' }
+      ]},
+      { hora:'1:00 PM – 3:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC vendiendo si no hay cliente → ciclo continuo' },
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat · experiencia del gimnasio · ventas complejas · supervisión' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros todo el turno · base IT, usuarios nuevos · soporte recepción si no hay cobros' }
+      ]},
+      { hora:'3:00 PM – 6:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC → cobros si Yeraldine está saturada' },
+        { n:'Carlos', t:'digital', c:'Cierra bandeja WA/MC antes de salir · supervisión comercial · experiencia' },
+        { n:'Ángeles', t:'sac', c:'SAC libera a vendedoras · apoyo cobros básicos · recepción' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros · cuadre ventas · admin · soporte documental' }
+      ]},
+      { hora:'6:00 PM – 9:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA → atención cliente' },
+        { n:'Ángeles', t:'admin', c:'Cuadre caja · subir ventas Caja 2026 · apoyo recepción (hasta 9 PM)' },
+        { n:'Yeraldine', t:'soporte', c:'IT, fidelización · soporte operativo' }
+      ]},
+      { hora:'9:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Lidera cierre comercial · digital WA' },
+        { n:'Yeraldine', t:'admin', c:'Cierre de tienda · cuadre caja · subir ventas Caja 2026 · cierre operativo sede' }
+      ]}
+    ]}
+  ]},
+  // MARTES [1]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Daniela', t:'venta', c:'Digital WA cuando no hay cliente · próximos a vencer' }
+      ]},
+      { hora:'1:00 PM – 6:00 PM', tag:'Apoyo Carlos', tc:'tag-apoyo', personas:[
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat toda la tarde · experiencia del gimnasio · ventas complejas · supervisión comercial' },
+        { n:'Camila', t:'cobro', c:'Con Carlos presente se enfoca en cobros · admin · cuadre ventas · recepción si hay cola' }
+      ]},
+      { hora:'6:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Ventas recepción · digital WA · cierre tienda · cuadre caja' }
+      ]}
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Valentina', t:'cobro', c:'Lidera cartera mañana · admin · bases · coordina con Heidy' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono · apertura tienda · soporte operativo' }
+      ]},
+      { hora:'1:00 PM – 9:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC → cobros tarde' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros · admin IT · facturas · bases · fidelización' },
+        { n:'Ángeles', t:'sac', c:'SAC · ventas recepción · datáfono (desde 3 PM) · cuadre caja (hasta 9 PM)' }
+      ]},
+      { hora:'9:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Cierre comercial · digital WA' },
+        { n:'Yeraldine', t:'admin', c:'Cierre de tienda · cuadre caja · subir ventas Caja 2026 · cierre operativo' }
+      ]}
+    ]}
+  ]},
+  // MIÉRCOLES [2]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Daniela', t:'venta', c:'Digital WA cuando no hay cliente · próximos a vencer' }
+      ]},
+      { hora:'1:00 PM – 3:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Ventas recepción · admin · cuadre ventas' }
+      ]},
+      { hora:'3:00 PM – 6:00 PM', tag:'Apoyo Nicol', tc:'tag-apoyo', personas:[
+        { n:'Nicol', t:'sac', c:'SAC · PQRS · casos complejos · cobros si hay casos · digital WA/MC' },
+        { n:'Camila', t:'venta', c:'Libre para vender — Nicol cubre SAC y digital' }
+      ]},
+      { hora:'6:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Ventas recepción · digital WA · cobros básicos · cuadre caja · cierre tienda' }
+      ]}
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Valentina', t:'cobro', c:'Lidera cartera mañana · admin · bases · coordina con Heidy' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono · apertura tienda · soporte operativo' }
+      ]},
+      { hora:'1:00 PM – 9:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat (hasta 6 PM) · experiencia · supervisión comercial' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros · admin IT · bases · facturas · fidelización' },
+        { n:'Ángeles', t:'sac', c:'SAC · ventas recepción (desde 3 PM) · cuadre caja (hasta 9 PM)' }
+      ]},
+      { hora:'9:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Yeraldine', t:'admin', c:'Cierre de tienda · cuadre caja · subir ventas Caja 2026 · cierre operativo' }
+      ]}
+    ]}
+  ]},
+  // JUEVES [3]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Daniela', t:'venta', c:'Digital WA cuando no hay cliente · próximos a vencer' }
+      ]},
+      { hora:'1:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Ventas presencial → digital WA/MC → cobros básicos → SAC → admin → cuadre caja → cierre tienda' }
+      ], alerta:'Sin apoyo — Camila cubre todo 9 horas. Cobros complejos escalan a Heidy remoto.' }
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Valentina', t:'cobro', c:'Lidera cartera mañana · admin · bases · coordina con Heidy' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono · apertura tienda · soporte operativo' }
+      ]},
+      { hora:'1:00 PM – 9:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC → cobros tarde' },
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat (hasta 6 PM) · supervisión comercial · experiencia' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros · admin IT · bases · facturas · fidelización' },
+        { n:'Ángeles', t:'sac', c:'SAC · ventas recepción (desde 3 PM) · cuadre caja (hasta 9 PM)' }
+      ]},
+      { hora:'9:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Cierre comercial · digital WA' },
+        { n:'Yeraldine', t:'admin', c:'Cierre de tienda · cuadre caja · subir ventas Caja 2026 · cierre operativo' }
+      ]}
+    ]}
+  ]},
+  // VIERNES [4]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Daniela', t:'venta', c:'Digital WA cuando no hay cliente · próximos a vencer' }
+      ]},
+      { hora:'1:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Camila', t:'venta', c:'Ventas presencial → digital WA/MC → cobros básicos → SAC → admin → cuadre caja → cierre tienda' }
+      ], alerta:'Sin apoyo — viernes suele ser de alto tráfico. Cobros complejos escalan a Heidy remoto.' }
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'5:00 AM – 1:00 PM', tag:'AM', tc:'tag-am', personas:[
+        { n:'Valentina', t:'cobro', c:'Lidera cartera mañana · admin · bases · coordina con Heidy' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono · apertura tienda · soporte operativo' }
+      ]},
+      { hora:'1:00 PM – 9:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC → cobros tarde' },
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat (hasta 6 PM) · supervisión comercial · experiencia' },
+        { n:'Yeraldine', t:'cobro', c:'Cobros · admin IT · bases · facturas · fidelización' },
+        { n:'Ángeles', t:'sac', c:'SAC · ventas recepción (desde 3 PM) · cuadre caja (hasta 9 PM)' }
+      ]},
+      { hora:'9:00 PM – 10:00 PM', tag:'PM', tc:'tag-pm', personas:[
+        { n:'Nicol', t:'venta', c:'Cierre comercial · digital WA' },
+        { n:'Yeraldine', t:'admin', c:'Cierre de tienda · cuadre caja · subir ventas Caja 2026 · cierre operativo' }
+      ]}
+    ]}
+  ]},
+  // SÁBADO [5]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'7:00 AM – 5:00 PM', tag:'Turno completo', tc:'tag-full', personas:[
+        { n:'Daniela', t:'venta', c:'Venta presencial → digital WA cuando no hay cliente → próximos a vencer · fidelización' }
+      ]}
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'7:00 AM – 5:00 PM', tag:'Turno completo', tc:'tag-full', personas:[
+        { n:'Nicol', t:'venta', c:'Venta presencial → digital WA/MC vendiendo si no hay cliente → ciclo continuo' },
+        { n:'Tatiana', t:'venta', c:'Ventas recepción · datáfono y transferencia · apertura tienda · soporte operativo' },
+        { n:'Carlos', t:'digital', c:'Lidera WA/ManyChat · experiencia del gimnasio · ventas complejas · supervisión' },
+        { n:'Heidy', t:'cobro', c:'Remoto — cobros y cartera · coordina con equipo por canal digital' }
+      ]}
+    ]}
+  ]},
+  // DOMINGO [6]
+  { sedes:[
+    { nombre:'Sede 1ra', badge:'badge-s1', turnos:[
+      { hora:'7:00 AM – 5:00 PM', tag:'Turno completo', tc:'tag-full', personas:[
+        { n:'Yeraldine', t:'venta', c:'Venta presencial → digital WA → cobros básicos → admin · cierre tienda' }
+      ], alerta:'Yeraldine sola todo el día. Cobros complejos escalan a Heidy remoto.' }
+    ]},
+    { nombre:'Sede 28', badge:'badge-s28', turnos:[
+      { hora:'7:00 AM – 5:00 PM', tag:'Turno completo', tc:'tag-full', personas:[
+        { n:'Ángeles', t:'sac', c:'SAC y atención al cliente · ventas recepción · datáfono · cuadre caja al cierre' },
+        { n:'Camila', t:'venta', c:'Venta presencial → digital WA/MC → cobros → SAC si todo bajo control → admin al cierre' }
+      ]}
+    ]}
+  ]}
+];
+
+const MATRIZ = [
+  { n:'Nicol',     r:'Líder Ventas + SAC',               s:'28 PM / Sáb 28',  v:2, c:2, d:1, a:1, ad:2 },
+  { n:'Valentina', r:'Líder Operativa + Aux. Cartera',   s:'28 AM',           v:3, c:1, d:2, a:2, ad:1 },
+  { n:'Daniela',   r:'Asesora Comercial + Fidelización', s:'1ra AM / Sáb 1ra',v:1, c:6, d:3, a:5, ad:4 },
+  { n:'Carlos',    r:'Líder Comercial + Digital + Exp.', s:'28 PM / Sáb 28',  v:2, c:-1, d:-2, a:-2, ad:-1 },
+  { n:'Camila',    r:'Asesora Comercial + Admin',        s:'1ra PM / Dom 28', v:4, c:4, d:4, a:3, ad:5 },
+  { n:'Yeraldine', r:'Asesora Comercial + IT/Fideliz.',  s:'28 PM / Dom 1ra', v:5, c:5, d:5, a:4, ad:3 },
+  { n:'Ángeles',   r:'Asesora Comercial + Adm/Caja',    s:'28 PM / Dom 28',  v:6, c:3, d:6, a:6, ad:6 },
+  { n:'Tatiana',   r:'Asesora Comercial + Tienda/Caja', s:'28 AM / Sáb 28',  v:7, c:7, d:7, a:7, ad:7 },
+  { n:'Heidy',     r:'Jefe de Cartera',                  s:'Remoto',          v:0, c:0, d:0, a:0, ad:0 },
+];
+
+const REGLAS = [
+  { n:'Nicol', s:'Sede 28 PM · 1–10 PM / Sábado 28 · 7 AM–5 PM', cascada:[
+    { t:'venta', x:'Venta presencial — primera prioridad siempre' },
+    { t:'digital', x:'Digital WA/MC vendiendo si no hay cliente presencial' },
+    { t:'cobro', x:'Cobros si Yeraldine o Heidy están saturadas' },
+    { t:'sac', x:'SAC solo si no hay oportunidad de venta' }
+  ]},
+  { n:'Camila', s:'Sede 1ra PM · 1–10 PM / Domingo 28 · 7 AM–5 PM', cascada:[
+    { t:'venta', x:'Venta presencial — primera prioridad' },
+    { t:'digital', x:'Digital WA/MC vendiendo si no hay cliente' },
+    { t:'sac', x:'SAC si todo está bajo control' },
+    { t:'digital', x:'Vuelve a digital si los canales se congestionan' },
+    { t:'admin', x:'Admin y cuadre caja al cierre del turno' }
+  ]},
+  { n:'Carlos', s:'Sede 28 PM · 1–6 PM / Apoyo Sede 1ra martes / Sábado 28', cascada:[
+    { t:'venta', x:'Ventas presenciales y complejas' },
+    { t:'digital', x:'Dueño de WA/ManyChat — lidera estrategia digital' },
+    { t:'sac', x:'Experiencia del gimnasio y supervisión comercial' }
+  ]},
+  { n:'Yeraldine', s:'Sede 28 PM · 1–10 PM / Domingo Sede 1ra · 7 AM–5 PM', cascada:[
+    { t:'cobro', x:'Cobros — tarea principal entre semana' },
+    { t:'venta', x:'Venta presencial el domingo (única en sede 1ra)' },
+    { t:'admin', x:'Admin IT, bases, facturas, fidelización' },
+    { t:'soporte', x:'Soporte recepción si no hay cobros pendientes' }
+  ]},
+  { n:'Valentina', s:'Sede 28 AM · 5 AM–1 PM + Apoyo Sede 1ra lunes 3–6 PM', cascada:[
+    { t:'cobro', x:'Lidera cobros y cartera de la mañana ambas sedes' },
+    { t:'admin', x:'Admin, bases y coordinación con Heidy remoto' },
+    { t:'venta', x:'Ventas recepción cuando no hay cobros pendientes' }
+  ]},
+  { n:'Daniela', s:'Sede 1ra AM · 5–1 PM / Sábado Sede 1ra · 7 AM–5 PM', cascada:[
+    { t:'venta', x:'Ventas presenciales — primera prioridad' },
+    { t:'digital', x:'Digital WA cuando no hay cliente en recepción' },
+    { t:'admin', x:'Próximos a vencer y fidelización sede 1ra' }
+  ]},
+  { n:'Ángeles', s:'Sede 28 PM · 3–9 PM / Domingo 28 · 7 AM–5 PM', cascada:[
+    { t:'sac', x:'SAC y atención al cliente — libera a vendedoras' },
+    { t:'venta', x:'Ventas recepción y datáfono' },
+    { t:'admin', x:'Cuadre caja y bases al cierre' }
+  ]},
+  { n:'Tatiana', s:'Sede 28 AM · 5–1 PM / Sábado 28 · 7 AM–5 PM', cascada:[
+    { t:'venta', x:'Ventas recepción y datáfono' },
+    { t:'soporte', x:'Apertura tienda y soporte operativo básico' }
+  ]},
+];
+
+function av(n, size=34) {
+  const a = AV[n]||{i:n.slice(0,2).toUpperCase(),c:'#888',b:'rgba(136,136,136,0.15)'};
+  return `<div class="p-avatar" style="width:${size}px;height:${size}px;background:${a.b};color:${a.c}">${a.i}</div>`;
+}
+
+function nivelEl(v) {
+  if(v===0) return `<span class="nivel" style="background:rgba(136,136,136,0.1);color:var(--gris-texto);font-size:10px;width:30px;height:30px">Rem.</span>`;
+  if(v===-1) return `<span class="nivel n-dash">—</span>`;
+  if(v===-2) return `<span class="nivel n-star">★</span>`;
+  const cls=['','n1','n2','n3','n4','n5','n6','n7'][Math.min(v,7)]||'n7';
+  return `<span class="nivel ${cls}">${v}</span>`;
+}
+
+let diaActual = 0;
+
+function renderTurnos() {
+  const dia = DIAS[diaActual];
+  let h = '';
+  dia.sedes.forEach(s => {
+    h += `<div class="sede-card"><div class="sede-header"><span class="sede-name">${s.nombre}</span><span class="sede-badge ${s.badge}">${s.nombre}</span></div>`;
+    s.turnos.forEach(t => {
+      h += `<div class="turno-block"><div class="turno-time-row"><span class="turno-time">${t.hora}</span><span class="turno-tag ${t.tc}">${t.tag}</span></div>`;
+      t.personas.forEach(p => {
+        const ti = T[p.t];
+        h += `<div class="persona-row">${av(p.n)}<div class="p-info"><div class="p-name">${p.n}</div><div class="t-pri"><span class="t-dot ${ti.dot}"></span><span class="t-label">${ti.label}</span><span class="t-badge ${ti.badge}">${ti.label}</span></div><div class="t-cascada">${p.c}</div></div></div>`;
+      });
+      if(t.alerta) h += `<div class="alerta alerta-warn"><span>⚠</span><span>${t.alerta}</span></div>`;
+      h += `</div>`;
+    });
+    h += `</div>`;
+  });
+  document.getElementById('sedes-container').innerHTML = h;
+}
+
+function renderMatriz() {
+  let h = '';
+  MATRIZ.forEach(p => {
+    const a = AV[p.n]||{i:p.n.slice(0,2),c:'#888',b:'rgba(136,136,136,0.15)'};
+    h += `<tr><td><div class="p-cell"><div class="mini-av" style="background:${a.b};color:${a.c}">${a.i}</div><div><div class="cell-name">${p.n}</div><div class="cell-role">${p.r} · ${p.s}</div></div></div></td>
+    <td class="tc">${nivelEl(p.v)}</td><td class="tc">${nivelEl(p.c)}</td><td class="tc">${nivelEl(p.d)}</td><td class="tc">${nivelEl(p.a)}</td><td class="tc">${nivelEl(p.ad)}</td></tr>`;
+  });
+  document.getElementById('matriz-body').innerHTML = h;
+}
+
+function renderReglas() {
+  let h = '';
+  REGLAS.forEach(r => {
+    const a = AV[r.n]||{i:r.n.slice(0,2),c:'#888',b:'rgba(136,136,136,0.15)'};
+    h += `<div class="regla-card"><div class="regla-head"><div class="p-avatar" style="background:${a.b};color:${a.c}">${a.i}</div><div><div class="regla-name">${r.n}</div><div class="regla-sede">${r.s}</div></div></div><div class="cascada">`;
+    r.cascada.forEach((item,i) => {
+      const ti = T[item.t];
+      h += `<div class="c-item"><span class="c-num">${i+1}</span><span class="t-dot ${ti.dot}" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px"></span><span class="c-texto">${item.x}</span></div>`;
+      if(i < r.cascada.length-1) h += `<div class="c-arrow">↓ si no hay oportunidad</div>`;
+    });
+    h += `</div></div>`;
+  });
+  document.getElementById('reglas-container').innerHTML = h;
+}
+
+function setDay(idx, btn) {
+  diaActual = idx;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTurnos();
+}
+
+function setView(v, btn) {
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['turnos','matriz','reglas'].forEach(x => {
+    document.getElementById('view-'+x).style.display = x===v ? 'block' : 'none';
+  });
+}
+
+const DIAS_N = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const hoy = new Date();
+document.getElementById('fecha-hoy').textContent = `${DIAS_N[hoy.getDay()]} ${hoy.getDate()} ${MESES[hoy.getMonth()]}`;
+const diaHoy = hoy.getDay();
+// 0=Dom→6, 1=Lun→0, 2=Mar→1, 3=Mie→2, 4=Jue→3, 5=Vie→4, 6=Sab→5
+const mapDia = [6,0,1,2,3,4,5];
+const idx = mapDia[diaHoy];
+document.querySelectorAll('.day-btn')[idx].classList.add('active');
+diaActual = idx;
+
+renderTurnos();
+renderMatriz();
+renderReglas();
+</script>
+</body>
+</html>
